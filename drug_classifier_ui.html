@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drug Regulatory Classifier</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F5F4F0;
+    --surface: #FFFFFF;
+    --surface2: #F0EEE9;
+    --border: #E2DFD8;
+    --text: #1A1916;
+    --muted: #8A8780;
+    --accent: #1E5FAD;
+    --accent-light: #E8F0FB;
+    --danger: #C0392B;
+    --danger-light: #FDECEA;
+    --success: #1A7A4A;
+    --success-light: #E6F4ED;
+    --warn: #A05C10;
+    --warn-light: #FEF3E4;
+    --pill-bg: #E8E6E1;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.04);
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* TOP NAV */
+  nav {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-icon {
+    width: 28px; height: 28px;
+    background: var(--accent);
+    border-radius: 7px;
+    display: grid; place-items: center;
+  }
+  .nav-icon svg { width: 16px; height: 16px; fill: white; }
+  nav h1 { font-size: 15px; font-weight: 600; color: var(--text); }
+  nav span { font-size: 13px; color: var(--muted); margin-left: 2px; }
+
+  /* LAYOUT */
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  .page-header {
+    margin-bottom: 1.75rem;
+  }
+  .page-header h2 { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+  .page-header p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+  /* STEP TABS */
+  .steps {
+    display: flex;
+    gap: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px;
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+  }
+  .step-btn {
+    flex: 1;
+    min-width: 100px;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    border-radius: 7px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .step-btn.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  .step-num {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--border);
+    font-size: 10px;
+    font-weight: 600;
+    display: grid; place-items: center;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .step-btn.active .step-num {
+    background: var(--accent);
+    color: white;
+  }
+  .step-btn.done .step-num {
+    background: var(--success);
+    color: white;
+  }
+  .step-btn.done { color: var(--success); }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    box-shadow: var(--shadow);
+    margin-bottom: 1rem;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title svg { width: 14px; height: 14px; opacity: 0.6; }
+
+  /* FORM GRID */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .form-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+  .required { color: var(--accent); margin-left: 2px; }
+  input, select {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(30,95,173,0.1);
+  }
+  input::placeholder { color: var(--muted); opacity: 0.6; }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%238A8780' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px; }
+
+  /* TOGGLE GROUP */
+  .toggle-group { display: flex; gap: 6px; }
+  .toggle-btn {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--surface);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+  .toggle-btn.active {
+    background: var(--accent-light);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* SLIDER */
+  .slider-wrap { display: flex; align-items: center; gap: 10px; }
+  .slider-wrap input[type=range] {
+    flex: 1;
+    padding: 0;
+    height: 4px;
+    border: none;
+    border-radius: 4px;
+    background: var(--border);
+    accent-color: var(--accent);
+    cursor: pointer;
+    box-shadow: none;
+  }
+  .slider-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent);
+    min-width: 32px;
+    text-align: right;
+  }
+
+  /* NAV BUTTONS */
+  .nav-btns {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1.5rem;
+  }
+  .btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { background: var(--surface2); }
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+  }
+  .btn-primary:hover { background: #164d8f; }
+  .btn-primary:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+  .btn-lg { padding: 13px 28px; font-size: 15px; font-weight: 600; }
+
+  /* RESULT CARD */
+  .result-card {
+    border-radius: var(--radius);
+    padding: 1.75rem;
+    text-align: center;
+    margin-bottom: 1rem;
+    border: 1.5px solid;
+    animation: fadeUp 0.4s ease;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .result-card.regulated {
+    background: var(--danger-light);
+    border-color: #f5a49a;
+  }
+  .result-card.non-regulated {
+    background: var(--success-light);
+    border-color: #8dd3b3;
+  }
+  .result-label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; opacity: 0.7; }
+  .result-verdict { font-size: 28px; font-weight: 600; margin-bottom: 4px; }
+  .result-sub { font-size: 13px; opacity: 0.7; }
+  .result-pill {
+    display: inline-block;
+    padding: 5px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 12px;
+  }
+  .result-card.regulated .result-pill { background: rgba(192,57,43,0.12); color: var(--danger); }
+  .result-card.non-regulated .result-pill { background: rgba(26,122,74,0.12); color: var(--success); }
+
+  /* PROB BAR */
+  .prob-section { margin-top: 1rem; }
+  .prob-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-size: 13px; }
+  .prob-bar-bg { height: 8px; background: var(--surface2); border-radius: 99px; overflow: hidden; }
+  .prob-bar-fill { height: 100%; border-radius: 99px; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+  .bar-regulated { background: var(--danger); }
+  .bar-non { background: var(--success); }
+
+  /* SUMMARY TABLE */
+  .summary-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .summary-table tr { border-bottom: 1px solid var(--border); }
+  .summary-table tr:last-child { border-bottom: none; }
+  .summary-table td { padding: 8px 0; }
+  .summary-table td:first-child { color: var(--muted); width: 55%; }
+  .summary-table td:last-child { font-weight: 500; text-align: right; font-family: 'DM Mono', monospace; font-size: 12px; }
+
+  /* BADGES */
+  .badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-high { background: var(--success-light); color: var(--success); }
+  .badge-medium { background: var(--warn-light); color: var(--warn); }
+  .badge-low { background: var(--danger-light); color: var(--danger); }
+
+  /* INFO BANNER */
+  .info-banner {
+    background: var(--accent-light);
+    border: 1px solid #b8d1f5;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #1a4a8a;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+  }
+  .info-banner svg { flex-shrink: 0; margin-top: 1px; }
+
+  /* HIDDEN */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* LOADING */
+  .loading-dots { display: flex; gap: 5px; justify-content: center; padding: 1rem 0; }
+  .loading-dots span {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: bounce 0.9s infinite;
+  }
+  .loading-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .loading-dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-8px); }
+  }
+
+  /* PROGRESS */
+  .progress-bar-wrap { height: 3px; background: var(--border); border-radius: 2px; margin-bottom: 1.5rem; }
+  .progress-bar { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s ease; }
+
+  /* DISCLAIMER */
+  .disclaimer {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 2rem;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .form-grid.three { grid-template-columns: 1fr 1fr; }
+    nav { padding: 0 1rem; }
+    .container { padding: 1.25rem 1rem 3rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-icon">
+    <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
+  </div>
+  <h1>Drug Regulatory Classifier</h1>
+  <span>· Powered by XGBoost</span>
+</nav>
+
+<div class="container">
+
+  <div class="page-header">
+    <h2>Classify a Drug</h2>
+    <p>Enter drug details across 3 steps to determine if it falls under regulated or non-regulated status.</p>
+  </div>
+
+  <!-- STEPS -->
+  <div class="steps" id="stepsNav">
+    <button class="step-btn active" onclick="goToStep(0)" id="stepBtn0">
+      <span class="step-num">1</span> Drug Profile
+    </button>
+    <button class="step-btn" onclick="goToStep(1)" id="stepBtn1">
+      <span class="step-num">2</span> Risk & Sales
+    </button>
+    <button class="step-btn" onclick="goToStep(2)" id="stepBtn2">
+      <span class="step-num">3</span> Distribution
+    </button>
+    <button class="step-btn" onclick="goToStep(3)" id="stepBtn3">
+      <span class="step-num">4</span> Result
+    </button>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-bar-wrap">
+    <div class="progress-bar" id="progressBar" style="width:25%"></div>
+  </div>
+
+  <!-- PANEL 1: Drug Profile -->
+  <div class="panel active" id="panel0">
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+        Drug Basics
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Dosage (mg)<span class="required">*</span></label>
+          <input type="number" id="dosage" placeholder="e.g. 250" min="50" max="650">
+        </div>
+        <div class="form-group">
+          <label>Clinical Trial Phase<span class="required">*</span></label>
+          <select id="trial_phase">
+            <option value="">Select phase</option>
+            <option value="1">Phase 1</option>
+            <option value="2">Phase 2</option>
+            <option value="3">Phase 3</option>
+            <option value="4">Phase 4</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Drug Form<span class="required">*</span></label>
+          <select id="drug_form">
+            <option value="">Select form</option>
+            <option value="Tablet">Tablet</option>
+            <option value="Capsule">Capsule</option>
+            <option value="Injection">Injection</option>
+            <option value="Syrup">Syrup</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Therapeutic Class<span class="required">*</span></label>
+          <select id="therapeutic_class">
+            <option value="">Select class</option>
+            <option value="Analgesic">Analgesic</option>
+            <option value="Antibiotic">Antibiotic</option>
+            <option value="Antiviral">Antiviral</option>
+            <option value="Antidepressant">Antidepressant</option>
+            <option value="Cardiovascular">Cardiovascular</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Manufacturing Region</label>
+          <select id="manufacturing_region">
+            <option value="North">North</option>
+            <option value="South">South</option>
+            <option value="East">East</option>
+            <option value="West">West</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Approval Time (months)</label>
+          <input type="number" id="approval_time" placeholder="e.g. 24" min="6" max="59">
+        </div>
+        <div class="form-group">
+          <label>Patent Duration (years)</label>
+          <input type="number" id="patent_duration" placeholder="e.g. 10" min="1" max="19">
+        </div>
+        <div class="form-group">
+          <label>R&D Investment ($ million)</label>
+          <input type="number" id="rd_investment" placeholder="e.g. 100" min="1" max="200">
+        </div>
+      </div>
+
+      <div style="margin-top:1.25rem;">
+        <div class="card-title" style="margin-bottom:0.75rem;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Flags
+        </div>
+        <div class="form-grid three" style="gap:10px;">
+          <div class="form-group">
+            <label>OTC Available?</label>
+            <div class="toggle-group">
+              <button class="toggle-btn active" onclick="toggle(this,'otc_flag','Yes')">Yes</button>
+              <button class="toggle-btn" onclick="toggle(this,'otc_flag','No')">No</button>
+            </div>
+            <input type="hidden" id="otc_flag" value="Yes">
+          </div>
+          <div class="form-group">
+            <label>Cold Storage?</label>
+            <div class="toggle-group">
+              <button class="toggle-btn active" onclick="toggle(this,'cold_storage','Yes')">Yes</button>
+              <button class="toggle-btn" onclick="toggle(this,'cold_storage','No')">No</button>
+            </div>
+            <input type="hidden" id="cold_storage" value="Yes">
+          </div>
+          <div class="form-group">
+            <label>High Risk Substance?</label>
+            <div class="toggle-group">
+              <button class="toggle-btn" onclick="toggle(this,'high_risk','Yes')">Yes</button>
+              <button class="toggle-btn active" onclick="toggle(this,'high_risk','No')">No</button>
+            </div>
+            <input type="hidden" id="high_risk" value="No">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-btns">
+      <div></div>
+      <button class="btn btn-primary" onclick="nextStep(0)">
+        Next: Risk & Sales
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- PANEL 2: Risk & Sales -->
+  <div class="panel" id="panel1">
+    <div class="card">
+      <div class="card-title">Financial Details</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Price Per Unit ($)</label>
+          <input type="number" id="price" placeholder="e.g. 49.99" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>Production Cost ($)</label>
+          <input type="number" id="production_cost" placeholder="e.g. 22.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>Marketing Spend ($)</label>
+          <input type="number" id="marketing" placeholder="e.g. 150000">
+        </div>
+        <div class="form-group">
+          <label>Annual Sales Volume</label>
+          <input type="number" id="sales_volume" placeholder="e.g. 25000">
+        </div>
+        <div class="form-group">
+          <label>Competitor Count</label>
+          <input type="number" id="competitor_count" placeholder="e.g. 5" min="0" max="24">
+        </div>
+        <div class="form-group">
+          <label>Insurance Coverage (%)</label>
+          <input type="number" id="insurance_coverage" placeholder="e.g. 60" min="0" max="100">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Risk Scores</div>
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div class="form-group">
+          <label>Side Effect Severity Score (1–10)</label>
+          <div class="slider-wrap">
+            <input type="range" id="side_effect" min="1" max="10" step="0.1" value="5" oninput="updSlider('side_effect','side_effect_val')">
+            <span class="slider-val" id="side_effect_val">5.0</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Abuse Potential Score (0–9.35)</label>
+          <div class="slider-wrap">
+            <input type="range" id="abuse" min="0" max="9.35" step="0.1" value="3" oninput="updSlider('abuse','abuse_val')">
+            <span class="slider-val" id="abuse_val">3.0</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Regulatory Risk Score (0–9)</label>
+          <div class="slider-wrap">
+            <input type="range" id="reg_risk" min="0" max="9" step="0.1" value="4" oninput="updSlider('reg_risk','reg_risk_val')">
+            <span class="slider-val" id="reg_risk_val">4.0</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Brand Reputation Score (1–10)</label>
+          <div class="slider-wrap">
+            <input type="range" id="brand_rep" min="1" max="10" step="0.1" value="5" oninput="updSlider('brand_rep','brand_rep_val')">
+            <span class="slider-val" id="brand_rep_val">5.0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-grid" style="margin-top:1rem;">
+        <div class="form-group">
+          <label>Adverse Event Reports</label>
+          <input type="number" id="adverse_events" placeholder="e.g. 5" min="0" max="16">
+        </div>
+        <div class="form-group">
+          <label>Recall History Count</label>
+          <input type="number" id="recall_count" placeholder="e.g. 0" min="0" max="6">
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-btns">
+      <button class="btn btn-ghost" onclick="prevStep(1)">← Back</button>
+      <button class="btn btn-primary" onclick="nextStep(1)">
+        Next: Distribution →
+      </button>
+    </div>
+  </div>
+
+  <!-- PANEL 3: Distribution -->
+  <div class="panel" id="panel2">
+    <div class="card">
+      <div class="card-title">Distribution & Reach</div>
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div class="form-group">
+          <label>Prescription Rate (0 – 1.0)</label>
+          <div class="slider-wrap">
+            <input type="range" id="prescription_rate" min="0.1" max="0.95" step="0.01" value="0.5" oninput="updSlider('prescription_rate','presc_val')">
+            <span class="slider-val" id="presc_val">0.50</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Hospital Distribution (%)</label>
+          <div class="slider-wrap">
+            <input type="range" id="hospital_dist" min="5" max="90" step="1" value="50" oninput="syncDist('hospital_dist')">
+            <span class="slider-val" id="hospital_dist_val">50%</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Pharmacy Distribution (%) <span style="font-size:11px;color:var(--muted)">(auto: 100 − hospital)</span></label>
+          <div class="slider-wrap">
+            <input type="range" id="pharmacy_dist" min="5" max="95" step="1" value="50" disabled style="opacity:0.5">
+            <span class="slider-val" id="pharmacy_dist_val">50%</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Export Percentage (%)</label>
+          <div class="slider-wrap">
+            <input type="range" id="export_pct" min="0" max="80" step="1" value="30" oninput="updSlider('export_pct','export_val')">
+            <span class="slider-val" id="export_val">30%</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Online Sales Percentage (%)</label>
+          <div class="slider-wrap">
+            <input type="range" id="online_pct" min="0.01" max="60" step="1" value="20" oninput="updSlider('online_pct','online_val')">
+            <span class="slider-val" id="online_val">20%</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Doctor Recommendation Rate (0 – 1.0)</label>
+          <div class="slider-wrap">
+            <input type="range" id="doctor_rec" min="0.1" max="0.95" step="0.01" value="0.6" oninput="updSlider('doctor_rec','doctor_val')">
+            <span class="slider-val" id="doctor_val">0.60</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-btns">
+      <button class="btn btn-ghost" onclick="prevStep(2)">← Back</button>
+      <button class="btn btn-primary btn-lg" onclick="classify()" id="classifyBtn">
+        🔬 Classify Drug
+      </button>
+    </div>
+  </div>
+
+  <!-- PANEL 4: Result -->
+  <div class="panel" id="panel3">
+    <div id="loadingState" style="display:none; text-align:center; padding:2rem 0;">
+      <div class="loading-dots"><span></span><span></span><span></span></div>
+      <p style="font-size:14px; color:var(--muted); margin-top:8px;">Analyzing drug profile…</p>
+    </div>
+
+    <div id="resultState" style="display:none;">
+      <div class="result-card" id="resultCard">
+        <div class="result-label">Classification Result</div>
+        <div class="result-verdict" id="resultVerdict">—</div>
+        <div class="result-sub" id="resultSub">—</div>
+        <div class="result-pill" id="resultPill">—</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Confidence Breakdown</div>
+        <div class="prob-section">
+          <div class="prob-row">
+            <span>Regulated Drug</span>
+            <span id="regPct" style="font-weight:500; color:var(--danger);">—</span>
+          </div>
+          <div class="prob-bar-bg" style="margin-bottom:10px;">
+            <div class="prob-bar-fill bar-regulated" id="regBar" style="width:0%"></div>
+          </div>
+          <div class="prob-row">
+            <span>Non-Regulated Drug</span>
+            <span id="nonRegPct" style="font-weight:500; color:var(--success);">—</span>
+          </div>
+          <div class="prob-bar-bg">
+            <div class="prob-bar-fill bar-non" id="nonRegBar" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Input Summary</div>
+        <table class="summary-table" id="summaryTable"></table>
+      </div>
+
+      <div class="info-banner">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>This result is model-generated. Always validate with a qualified regulatory affairs professional before making compliance decisions.</span>
+      </div>
+
+      <div class="nav-btns">
+        <button class="btn btn-ghost" onclick="resetForm()">← Classify Another</button>
+        <button class="btn btn-primary" onclick="copyResult()">📋 Copy Result</button>
+      </div>
+    </div>
+  </div>
+
+  <p class="disclaimer">Drug Regulatory Classifier · Demo UI · Connect to your trained XGBoost API for live predictions</p>
+</div>
+
+<script>
+  let currentStep = 0;
+  const totalSteps = 4;
+
+  function goToStep(step) {
+    document.getElementById('panel' + currentStep).classList.remove('active');
+    document.getElementById('stepBtn' + currentStep).classList.remove('active');
+    currentStep = step;
+    document.getElementById('panel' + currentStep).classList.add('active');
+    document.getElementById('stepBtn' + currentStep).classList.add('active');
+    const pct = ((currentStep + 1) / totalSteps) * 100;
+    document.getElementById('progressBar').style.width = pct + '%';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function nextStep(from) { goToStep(from + 1); markDone(from); }
+  function prevStep(from) { goToStep(from - 1); }
+
+  function markDone(step) {
+    const btn = document.getElementById('stepBtn' + step);
+    btn.classList.remove('active');
+    btn.classList.add('done');
+    btn.querySelector('.step-num').textContent = '✓';
+  }
+
+  function toggle(btn, fieldId, val) {
+    const parent = btn.closest('.toggle-group');
+    parent.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(fieldId).value = val;
+  }
+
+  function updSlider(id, outId) {
+    const v = parseFloat(document.getElementById(id).value);
+    document.getElementById(outId).textContent = id.includes('rate') || id.includes('pct') || id === 'doctor_rec' || id === 'prescription_rate'
+      ? (id.includes('pct') ? v.toFixed(0) + '%' : v.toFixed(2))
+      : v.toFixed(1);
+  }
+
+  function syncDist(changedId) {
+    const hVal = parseInt(document.getElementById('hospital_dist').value);
+    const pVal = Math.max(5, Math.min(95, 100 - hVal));
+    document.getElementById('pharmacy_dist').value = pVal;
+    document.getElementById('hospital_dist_val').textContent = hVal + '%';
+    document.getElementById('pharmacy_dist_val').textContent = pVal + '%';
+  }
+
+  function gatherInputs() {
+    return {
+      Dosage_mg: parseFloat(document.getElementById('dosage').value) || 250,
+      Clinical_Trial_Phase: parseInt(document.getElementById('trial_phase').value) || 3,
+      Drug_Form: document.getElementById('drug_form').value || 'Tablet',
+      Therapeutic_Class: document.getElementById('therapeutic_class').value || 'Analgesic',
+      Manufacturing_Region: document.getElementById('manufacturing_region').value || 'North',
+      Approval_Time_Months: parseInt(document.getElementById('approval_time').value) || 24,
+      Patent_Duration_Years: parseInt(document.getElementById('patent_duration').value) || 10,
+      RD_Investment_Million: parseFloat(document.getElementById('rd_investment').value) || 100,
+      OTC_Flag: document.getElementById('otc_flag').value,
+      Requires_Cold_Storage: document.getElementById('cold_storage').value,
+      High_Risk_Substance: document.getElementById('high_risk').value,
+      Price_Per_Unit: parseFloat(document.getElementById('price').value) || 49.99,
+      Production_Cost: parseFloat(document.getElementById('production_cost').value) || 22,
+      Marketing_Spend: parseFloat(document.getElementById('marketing').value) || 150000,
+      Annual_Sales_Volume: parseFloat(document.getElementById('sales_volume').value) || 25000,
+      Competitor_Count: parseInt(document.getElementById('competitor_count').value) || 5,
+      Insurance_Coverage_Percentage: parseFloat(document.getElementById('insurance_coverage').value) || 60,
+      Side_Effect_Severity_Score: parseFloat(document.getElementById('side_effect').value),
+      Abuse_Potential_Score: parseFloat(document.getElementById('abuse').value),
+      Regulatory_Risk_Score: parseFloat(document.getElementById('reg_risk').value),
+      Brand_Reputation_Score: parseFloat(document.getElementById('brand_rep').value),
+      Adverse_Event_Reports: parseInt(document.getElementById('adverse_events').value) || 0,
+      Recall_History_Count: parseInt(document.getElementById('recall_count').value) || 0,
+      Prescription_Rate: parseFloat(document.getElementById('prescription_rate').value),
+      Hospital_Distribution_Percentage: parseFloat(document.getElementById('hospital_dist').value),
+      Pharmacy_Distribution_Percentage: parseFloat(document.getElementById('pharmacy_dist').value),
+      Export_Percentage: parseFloat(document.getElementById('export_pct').value),
+      Online_Sales_Percentage: parseFloat(document.getElementById('online_pct').value),
+      Doctor_Recommendation_Rate: parseFloat(document.getElementById('doctor_rec').value),
+    };
+  }
+
+  async function classify() {
+  markDone(2);
+  goToStep(3);
+  document.getElementById('loadingState').style.display = 'block';
+  document.getElementById('resultState').style.display = 'none';
+
+  const inputs = gatherInputs();
+
+  try {
+    const response = await fetch('http://localhost:8000/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(inputs)
+    });
+
+    if (!response.ok) throw new Error('API error: ' + response.status);
+
+    const result = await response.json();
+    showResult(result, inputs);
+
+  } catch (err) {
+    document.getElementById('loadingState').innerHTML =
+      `<p style="color:var(--danger); text-align:center; padding:2rem;">
+        ⚠️ Could not reach the classifier API.<br>
+        <small style="color:var(--muted)">Make sure uvicorn is running on port 8000.</small>
+      </p>`;
+  }
+}
+
+  function showResult(result, inputs) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('resultState').style.display = 'block';
+
+    const isRegulated = result.prediction === 'Regulated Drug';
+    const regPct = Math.round(result.regulated_probability * 100);
+    const nonPct = 100 - regPct;
+
+    const card = document.getElementById('resultCard');
+    card.className = 'result-card ' + (isRegulated ? 'regulated' : 'non-regulated');
+    document.getElementById('resultVerdict').textContent = result.prediction;
+    document.getElementById('resultSub').textContent = isRegulated
+      ? 'This drug requires regulatory oversight and compliance procedures.'
+      : 'This drug does not fall under the regulated classification threshold.';
+    document.getElementById('resultPill').textContent =
+      `${result.confidence} Confidence · ${isRegulated ? regPct : nonPct}% probability`;
+
+    document.getElementById('regPct').textContent = regPct + '%';
+    document.getElementById('nonRegPct').textContent = nonPct + '%';
+    setTimeout(() => {
+      document.getElementById('regBar').style.width = regPct + '%';
+      document.getElementById('nonRegBar').style.width = nonPct + '%';
+    }, 100);
+
+    const rows = [
+      ['Drug Form', inputs.Drug_Form],
+      ['Therapeutic Class', inputs.Therapeutic_Class],
+      ['Dosage', inputs.Dosage_mg + ' mg'],
+      ['Clinical Trial Phase', 'Phase ' + inputs.Clinical_Trial_Phase],
+      ['Regulatory Risk Score', inputs.Regulatory_Risk_Score.toFixed(1)],
+      ['Abuse Potential Score', inputs.Abuse_Potential_Score.toFixed(1)],
+      ['High Risk Substance', inputs.High_Risk_Substance],
+      ['OTC Available', inputs.OTC_Flag],
+      ['Side Effect Score', inputs.Side_Effect_Severity_Score.toFixed(1)],
+      ['Recall History', inputs.Recall_History_Count],
+    ];
+    document.getElementById('summaryTable').innerHTML = rows.map(r =>
+      `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`
+    ).join('');
+  }
+
+  function copyResult() {
+    const verdict = document.getElementById('resultVerdict').textContent;
+    const pill = document.getElementById('resultPill').textContent;
+    navigator.clipboard.writeText(`Drug Classification: ${verdict}\n${pill}`)
+      .then(() => alert('Result copied to clipboard!'));
+  }
+
+  function resetForm() {
+    location.reload();
+  }
+
+  // Sync initial slider labels
+  ['side_effect','abuse','reg_risk','brand_rep'].forEach(id => {
+    const out = id.replace('side_effect','side_effect').replace('abuse','abuse').replace('reg_risk','reg_risk').replace('brand_rep','brand_rep');
+    document.getElementById(id).dispatchEvent(new Event('input'));
+  });
+</script>
+
+</body>
+</html>
